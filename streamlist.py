@@ -23,7 +23,7 @@ from transformers import AutoModel, AutoTokenizer
 from typing import List, Tuple
 from modelscope import AutoModelForCausalLM, AutoTokenizer as MAutoTokenizer
 
-BASE_PATH = '~/projects/chatglm/model'
+BASE_PATH = '/Users/bytedance/projects/chatglm/model'
 # MODEL_PATH = os.environ.get('MODEL_PATH', 'THUDM/chatglm3-6b')
 MODEL_PATH = os.path.join(BASE_PATH, 'qwen1.5-7b')
 # TOKENIZER_PATH = os.environ.get("TOKENIZER_PATH", MODEL_PATH)
@@ -235,7 +235,9 @@ if prompt_text:
             unfinished_sequences = unfinished_sequences.mul(
                 next_tokens.tile(eos_token_id_tensor.shape[0], 1).ne(eos_token_id_tensor.unsqueeze(1)).prod(dim=0)
             )
-            response = tokenizer.decode(input_ids.tolist()[0][input_ids_seq_length:-1])
+            # response = tokenizer.batch_decode(input_ids.tolist()[0][input_ids_seq_length:-1])
+            # 通义qianwen编码
+            response = tokenizer.batch_decode(input_ids[:, input_ids_seq_length-1:], skip_special_tokens=True)[0]
             if response and response[-1] != "�":
                 response, history = process_response(response, history)
 
