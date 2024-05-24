@@ -199,12 +199,13 @@ if prompt_text:
 
     unfinished_sequences = input_ids.new(input_ids.shape[0]).fill_(1)
     scores = None
-
+    past_key_values = st.session_state.past_key_values
     # generation
     with torch.no_grad():
         while True:
             transformer_inputs = model.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
+            
             # DL model前向传播
             outputs = model(
                 **transformer_inputs,
@@ -213,7 +214,7 @@ if prompt_text:
                 output_hidden_states=False,
             )
 
-            print(outputs)
+            past_key_values = outputs.past_key_values
 
             next_token_logits = outputs.logits[:, -1, :]
 
@@ -235,17 +236,17 @@ if prompt_text:
             unfinished_sequences = unfinished_sequences.mul(
                 next_tokens.tile(eos_token_id_tensor.shape[0], 1).ne(eos_token_id_tensor.unsqueeze(1)).prod(dim=0)
             )
-            # response = tokenizer.batch_decode(input_ids.tolist()[0][input_ids_seq_length:-1])
+            # chatGLM 解码
+            # response = tokenizer.decode(input_ids.tolist()[0][input_ids_seq_length:-1])
             # 通义qianwen编码
-            response = tokenizer.batch_decode(input_ids[:, input_ids_seq_length-1:], skip_special_tokens=True)[0]
-            if response and response[-1] != "�":
-                response, history = process_response(response, history)
+            response = tokenizer.batch_decode(input_ids[:, input_ids_seq_length:], skip_special_tokens=True)[0]
 
             message_placeholder.markdown(response)
             
             if unfinished_sequences.max() == 0 or stopping_criteria(input_ids, scores):
+                history.append({"role": "assistant", "content": response})
                 break
     # 展示到streamlit面板上
 
     st.session_state.history = history
-    # st.session_state.past_key_values = past_key_values
+    st.session_state.past_key_values = past_key_values
